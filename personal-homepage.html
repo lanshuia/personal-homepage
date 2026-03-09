@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- 
+========================================
+      +7 的个人主页 - 数字分身版
+========================================
+这是一个简单的个人主页项目，包含：
+1. 左侧：个人信息展示卡片
+2. 右侧：与数字分身聊天的对话框
+
+项目结构：
+- HTML（第80行开始）：页面内容和布局
+- CSS（第20-200行）：样式和颜色定义
+- JavaScript（第230行开始）：聊天逻辑
+
+修改指南：
+- 改颜色：找 #9CAF88（莫兰迪绿），替换成你想要的颜色
+- 改个人信息：改 HTML 中的文本内容
+- 改聊天回复：改 JavaScript 中的 responses 对象
+========================================
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>+7 的个人主页</title>
+    
+    <!-- ========================================
+         CSS 样式部分（控制页面的外观）
+         修改这里可以改颜色、字体、间距等
+         ======================================== -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background-color: #fafaf8;  /* 页面背景色（米白色） */
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+        }
+
+        /* 大屏幕时的布局：左侧个人信息 + 右侧聊天框 */
+        @media (min-width: 1024px) {
+            .layout {
+                grid-template-columns: 2fr 3fr;  /* 左右两列布局 */
+                gap: 48px;
+            }
+        }
+
+        /* ========================================
+           左侧：个人信息区 样式
+           ======================================== */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                position: sticky;
+                top: 32px;
+                height: fit-content;
+                gap: 32px;  /* 大屏幕增加间距 */
+            }
+        }
+
+        /* 头像 */
+        .avatar {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto;
+            position: relative;  /* 让气泡相对于头像定位 */
+        }
+
+        @media (min-width: 1024px) {
+            .avatar {
+                width: 160px;
+                height: 160px;
+                margin: 0;
+            }
+        }
+
+        .avatar-box {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);  /* 增加头像阴影 */
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* 鼠标悬停时的抖动效果 */
+        .avatar-box:hover {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* 定义抖动动画 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            10% { transform: translateX(-3px) rotate(-1deg); }
+            20% { transform: translateX(3px) rotate(1deg); }
+            30% { transform: translateX(-3px) rotate(-1deg); }
+            40% { transform: translateX(3px) rotate(1deg); }
+            50% { transform: translateX(-3px) rotate(-1deg); }
+            60% { transform: translateX(3px) rotate(1deg); }
+            70% { transform: translateX(-3px) rotate(-1deg); }
+            80% { transform: translateX(3px) rotate(1deg); }
+            90% { transform: translateX(-3px) rotate(-1deg); }
+        }
+
+        /* 对话气泡弹出动画 */
+        @keyframes popUp {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -20px) scale(0.5);
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -60px) scale(1);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .avatar-box {
+                font-size: 56px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);  /* 大屏幕更强的阴影 */
+            }
+        }
+
+        /* 名字和介绍 */
+        .intro {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;  /* 增加名字和介绍的间距 */
+            text-align: center;
+        }
+
+        @media (min-width: 1024px) {
+            .intro {
+                text-align: left;
+                gap: 16px;  /* 大屏幕进一步加大间距 */
+            }
+        }
+
+        .name {
+            font-size: 32px;
+            font-weight: 300;
+            color: #111827;
+        }
+
+        @media (min-width: 1024px) {
+            .name {
+                font-size: 48px;  /* 大屏幕加大名字 */
+                font-weight: 400;
+                line-height: 1.2;
+            }
+        }
+
+        .tagline {
+            font-size: 16px;
+            color: #9CAF88;  /* 一句话介绍的颜色（莫兰迪绿） - 改这里可以改此处颜色 */
+            font-weight: 500;
+        }
+
+        @media (min-width: 1024px) {
+            .tagline {
+                font-size: 18px;  /* 大屏幕加大副标题 */
+            }
+        }
+
+        /* ========================================
+           个人信息展示区 样式
+           ======================================== */
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;  /* 卡片之间的间距 */
+            padding-top: 0;  /* 去掉顶部padding */
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background-color: rgba(255, 255, 255, 0.7);  /* 半透明白色背景 */
+            border: 1px solid rgba(156, 175, 136, 0.2);  /* 淡绿色边框 */
+            padding: 12px 14px;  /* 卡片内边距 */
+            border-radius: 8px;
+            backdrop-filter: blur(10px);  /* 玻璃态效果 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .info-label {
+            font-size: 11px;  /* 减小标签字体 */
+            color: #6b7280;  /* 标签颜色（灰色） */
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;  /* 标签大写 */
+            opacity: 0.8;  /* 标签略微透明 */
+        }
+
+        .info-content {
+            font-size: 14px;  /* 内容字体 */
+            color: #111827;  /* 内容文字颜色 */
+            font-weight: 500;
+        }
+
+        /* ========================================
+           右侧：聊天框区域 样式
+           ======================================== */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-box {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        @media (min-width: 1024px) {
+            .chat-box {
+                height: 500px;  /* 增加聊天框高度 */
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);  /* 增强阴影，突出聊天框 */
+                border: 1px solid rgba(156, 175, 136, 0.3);  /* 淡绿色边框 */
+            }
+        }
+
+        /* 聊天头部 */
+        .chat-header {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 24px;
+            background-color: #fafaf8;
+        }
+
+        .chat-title {
+            font-size: 18px;  /* 加大标题字体 */
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .chat-subtitle {
+            font-size: 13px;  /* 减小副标题字体 */
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* 消息区 */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #ffffff;
+        }
+
+        .message {
+            display: flex;
+            gap: 8px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 10px 14px;  /* 增加padding，手机端更舒适 */
+            border-radius: 8px;
+            font-size: 15px;  /* 稍大字体，手机更易读 */
+            line-height: 1.5;
+        }
+
+        /* 用户发送的消息 - 绿色气泡 */
+        .message.user .message-bubble {
+            background-color: #9CAF88;  /* 用户消息背景色（莫兰迪绿） */
+            color: #ffffff;
+            border-bottom-right-radius: 0;
+        }
+
+        /* 分身回复的消息 - 灰色气泡 */
+        .message.bot .message-bubble {
+            background-color: #f3f4f6;  /* 分身消息背景色（浅灰色） */
+            color: #111827;
+            border-bottom-left-radius: 0;
+        }
+
+        /* 加载动画（分身正在回复时） */
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #9CAF88;  /* 加载动画颜色（莫兰迪绿） */
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========================================
+           快捷按钮区 样式
+           ======================================== */
+        .quick-buttons {
+            border-top: 1px solid #e5e7eb;
+            padding: 12px 24px;
+            background-color: #fafaf8;
+        }
+
+        .quick-label {
+            font-size: 11px;  /* 减小标签字体 */
+            color: #6b7280;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .buttons-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .quick-btn {
+            font-size: 13px;  /* 调整按钮字体 */
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            border-radius: 20px;
+            padding: 6px 14px;  /* 调整按钮padding */
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .quick-btn:hover {
+            border-color: #9b9b9b;  /* 鼠标悬停时的边框颜色 */
+        }
+
+        .quick-btn:active {
+            transform: scale(0.98);  /* 点击时的缩放效果 */
+        }
+
+        /* ========================================
+           输入框和发送按钮 样式
+           ======================================== */
+        .input-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 16px 24px;
+            background-color: #ffffff;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-field {
+            flex: 1;
+            background-color: #f9fafb;  /* 输入框背景色 */
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 14px;  /* 增加padding */
+            font-size: 15px;  /* 稍大字体 */
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: #9CAF88;  /* 输入框获得焦点时的边框颜色（莫兰迪绿） */
+            box-shadow: 0 0 0 3px rgba(156, 175, 136, 0.1);
+        }
+
+        .input-field:disabled {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        /* 发送按钮 */
+        .send-btn {
+            background-color: #9CAF88;  /* 发送按钮颜色（莫兰迪绿） */
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;  /* 增加padding */
+            cursor: pointer;
+            font-size: 15px;  /* 稍大字体 */
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background-color: #8a9a73;  /* 发送按钮悬停时的颜色 */
+        }
+
+        .send-btn:active:not(:disabled) {
+            transform: scale(0.98);  /* 点击时的缩放效果 */
+        }
+
+        .send-btn:disabled {
+            background-color: #cccccc;  /* 发送按钮禁用时的颜色 */
+            cursor: not-allowed;
+        }
+
+        .send-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        @media (max-width: 640px) {
+            .send-text {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="layout">
+            <!-- ========================================
+                 左侧：个人信息区
+                 包含：头像、名字、一句话介绍、个人信息卡片
+                 你可以改这里的文本来更新个人信息
+                 ======================================== -->
+            <div class="sidebar">
+                <!-- 头像 -->
+                <div class="avatar">
+                    <div class="avatar-box">🐱</div>  <!-- 可以改成其他emoji -->
+                </div>
+
+                <!-- 名字和一句话介绍 -->
+                <div class="intro">
+                    <h1 class="name">+7</h1>  <!-- 改这里改名字 -->
+                    <p class="tagline">高效偷懒的工作者</p>  <!-- 改这里改一句话介绍 -->
+                </div>
+
+                <!-- 个人信息卡片 -->
+                <div class="info-section">
+                    <!-- 每个信息项都包含：标签 + 内容 -->
+                    <div class="info-item">
+                        <p class="info-label">最近在忙</p>
+                        <p class="info-content">撰写材料和学习 AI</p>  <!-- 改这里 -->
+                    </div>
+
+                    <div class="info-item">
+                        <p class="info-label">最爱的事</p>
+                        <p class="info-content">躺着</p>  <!-- 改这里 -->
+                    </div>
+
+                    <div class="info-item">
+                        <p class="info-label">说话特点</p>
+                        <p class="info-content">阴阳怪气</p>  <!-- 改这里 -->
+                    </div>
+
+                    <div class="info-item">
+                        <p class="info-label">工作状态</p>
+                        <p class="info-content">努力上班，赚钱养家</p>  <!-- 改这里 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================
+                 右侧：聊天框区域
+                 包含：聊天头部 + 消息显示 + 快捷按钮 + 输入框
+                 ======================================== -->
+            <div class="chat-container">
+                <div class="chat-box">
+                    <!-- 聊天框标题 -->
+                    <div class="chat-header">
+                        <h2 class="chat-title">来聊聊吧</h2>
+                        <p class="chat-subtitle">问我任何感兴趣的事</p>
+                    </div>
+
+                    <!-- 消息显示区（用户和分身的对话显示在这里） -->
+                    <div class="messages" id="messagesContainer">
+                        <!-- 初始消息由JavaScript动态添加 -->
+                        <div class="message bot">
+                            <div class="message-bubble">
+                                哈，新来的？我是 +7 的数字分身，可以帮你了解这位毒舌的 I 人。有什么想问的吗？
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷问题按钮（点击直接发送） -->
+                    <div class="quick-buttons">
+                        <p class="quick-label">热门话题</p>
+                        <div class="buttons-row">
+                            <!-- 每个按钮点击时会调用 handleQuickQuestion() 函数 -->
+                            <button class="quick-btn" onclick="handleQuickQuestion('你在做什么')">你在做什么</button>
+                            <button class="quick-btn" onclick="handleQuickQuestion('你做的事有意义吗')">有意义吗</button>
+                            <button class="quick-btn" onclick="handleQuickQuestion('最近忙吗')">最近忙吗</button>
+                        </div>
+                    </div>
+
+                    <!-- 输入框和发送按钮 -->
+                    <div class="input-section">
+                        <div class="input-row">
+                            <!-- 输入框：用户在这里输入问题 -->
+                            <input 
+                                type="text" 
+                                id="inputField"
+                                class="input-field" 
+                                placeholder="输入你的问题..."
+                                onkeypress="handleKeyPress(event)"
+                            >
+                            <!-- 发送按钮 -->
+                            <button class="send-btn" id="sendBtn" onclick="handleSendMessage()">
+                                <svg class="send-icon" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16820085 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4772535 C0.994623095,2.05451001 0.837654326,3.0970956 1.15159189,3.88258256 L3.03521743,10.3235756 C3.03521743,10.4806729 3.19218622,10.6377703 3.50612381,10.6377703 L16.6915026,11.4232572 C16.6915026,11.4232572 17.1624089,11.4232572 17.1624089,12.0507964 C17.1624089,12.6315722 16.6915026,12.4744748 16.6915026,12.4744748 Z"/>
+                                </svg>
+                                <span class="send-text">发送</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             作品展示区
+             ======================================== -->
+        <div style="margin-top: 48px;">
+            <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin-bottom: 16px;">
+                作品展示
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                <!-- 作品卡片 1 -->
+                <div style="background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); border-radius: 8px; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: all 0.2s;">
+                    <div style="padding: 16px 16px 12px 16px; border-bottom: 1px solid rgba(156, 175, 136, 0.1);">
+                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">作品 1</h3>
+                    </div>
+                    <div style="width: 100%; height: 160px; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 48px;">🎨</div>
+                    <div style="padding: 12px 16px;">
+                        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0;">简要描述你的第一个作品或项目</p>
+                    </div>
+                </div>
+
+                <!-- 作品卡片 2 -->
+                <div style="background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); border-radius: 8px; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: all 0.2s;">
+                    <div style="padding: 16px 16px 12px 16px; border-bottom: 1px solid rgba(156, 175, 136, 0.1);">
+                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">作品 2</h3>
+                    </div>
+                    <div style="width: 100%; height: 160px; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 48px;">💻</div>
+                    <div style="padding: 12px 16px;">
+                        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0;">简要描述你的第二个作品或项目</p>
+                    </div>
+                </div>
+
+                <!-- 作品卡片 3 -->
+                <div style="background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); border-radius: 8px; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: all 0.2s;">
+                    <div style="padding: 16px 16px 12px 16px; border-bottom: 1px solid rgba(156, 175, 136, 0.1);">
+                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">作品 3</h3>
+                    </div>
+                    <div style="width: 100%; height: 160px; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 48px;">🚀</div>
+                    <div style="padding: 12px 16px;">
+                        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0;">简要描述你的第三个作品或项目</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             联系方式区
+             ======================================== -->
+        <div style="margin-top: 48px; margin-bottom: 32px;">
+            <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin-bottom: 16px;">
+                联系我
+            </h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                <a href="mailto:your-email@example.com" style="display: inline-block; background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); color: #374151; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; transition: all 0.2s; backdrop-filter: blur(10px);">
+                    📧 邮箱
+                </a>
+                <a href="https://twitter.com" style="display: inline-block; background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); color: #374151; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; transition: all 0.2s; backdrop-filter: blur(10px);">
+                    𝕏 Twitter
+                </a>
+                <a href="https://github.com" style="display: inline-block; background-color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(156, 175, 136, 0.2); color: #374151; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; transition: all 0.2s; backdrop-filter: blur(10px);">
+                    💻 GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         JavaScript 部分（控制页面的交互逻辑）
+         ======================================== -->
+    <script>
+        // ========================================
+        // 1. 数据存储部分
+        // ========================================
+        
+        // 存储所有聊天消息的数组
+        // 每条消息包含：id、type（'user'或'bot'）、content（消息内容）
+        let messages = [
+            {
+                id: 1,
+                type: 'bot',
+                content: '哈，新来的？我是 +7 的数字分身，可以帮你了解这位毒舌的 I 人。有什么想问的吗？'
+            }
+        ];
+        
+        // 标记分身是否正在回复（用来控制加载动画）
+        let isLoading = false;
+
+        // ========================================
+        // 2. 分身的回复内容
+        // ========================================
+        
+        // 预设的回复 - 按关键词匹配
+        // key: 用户输入包含的关键词
+        // value: 分身的回复内容
+        const responses = {
+            '你在做什么': '最近主要在学 AI 编程，想自己开发一个 APP。说白了就是从摸鱼人变成摸鱼程序员的过程。',
+            '在做什么': '最近主要在学 AI 编程，想自己开发一个 APP。说白了就是从摸鱼人变成摸鱼程序员的过程。',
+            '最近': '最近主要在学 AI 编程，想自己开发一个 APP。说白了就是从摸鱼人变成摸鱼程序员的过程。',
+            '你是谁': '我是 +7，一个正在学习 AI 的摸鱼人。语气有点毒舌，但分寸感还是有的。',
+            '谁': '我是 +7，一个正在学习 AI 的摸鱼人。语气有点毒舌，但分寸感还是有的。',
+            '擅长什么': '主要关注 AI 学习这块。其他的嘛，不好意思，我还在学。',
+            '擅长': '主要关注 AI 学习这块。其他的嘛，不好意思，我还在学。',
+            '忙吗': '相对来说还好，学 AI 编程的时间挺充分的。',
+            '忙': '相对来说还好，学 AI 编程的时间挺充分的。',
+            '做过什么': '这个得看我的作品展示区，里面有我最近做的几个项目。真实情况比较简陋，但都是自己写的。',
+            '作品': '这个得看我的作品展示区，里面有我最近做的几个项目。真实情况比较简陋，但都是自己写的。',
+            '怎么联系': '可以通过邮箱、Twitter 或 GitHub 联系我，页面下面有链接。',
+            '联系': '可以通过邮箱、Twitter 或 GitHub 联系我，页面下面有链接。',
+            '联系方式': '可以通过邮箱、Twitter 或 GitHub 联系我，页面下面有链接。',
+            '有意义吗': '有意义啊，至少我在学点东西，而不是纯摸鱼。',
+            '意义': '有意义啊，至少我在学点东西，而不是纯摸鱼。',
+            '目标': '短期目标就是把 AI 编程学扎实，长期目标是开发一个自己的 APP。',
+            '爱好': '现在的爱好就是学 AI，有时候还是想摸一会儿鱼就是了。'
+        };
+
+        // 如果用户输入没有匹配到上面的关键词，就随机选一个默认回复
+        const defaultResponses = [
+            '这个问题有点意思。不过我得老实说，这方面我还不太了解。要不你直接联系我？',
+            '嗯，你这个问题我没想过。有兴趣的话可以问我一下。',
+            '这个话题我可能帮不了你，但欢迎通过联系方式继续聊。',
+            '你说的挺有意思的。具体情况的话，联系我聊聊呗。',
+            '我得承认，这方面我确实不太懂。有其他问题吗？'
+        ];
+
+        // ========================================
+        // 3. 核心函数：生成分身回复
+        // ========================================
+        
+        function generateBotResponse(userInput) {
+            // 遍历responses对象，看用户的输入是否包含某个关键词
+            for (const [keyword, response] of Object.entries(responses)) {
+                if (userInput.includes(keyword)) {
+                    return response;  // 找到匹配的关键词，返回对应的回复
+                }
+            }
+            
+            // 没有找到匹配的关键词，就随机返回一个默认回复
+            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+        }
+
+        // ========================================
+        // 4. 核心函数：渲染消息（把消息显示在页面上）
+        // ========================================
+        
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';  // 清空之前的消息
+
+            // 遍历messages数组，把每条消息都显示出来
+            messages.forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${msg.type}`;  // 根据type确定是左对齐还是右对齐
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.textContent = msg.content;
+                
+                msgDiv.appendChild(bubble);
+                container.appendChild(msgDiv);
+            });
+
+            // 如果分身正在回复，显示加载动画
+            if (isLoading) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message bot';
+                const loadingBubble = document.createElement('div');
+                loadingBubble.className = 'message-bubble';
+                loadingBubble.innerHTML = '<div class="loading-spinner"></div>';
+                loadingDiv.appendChild(loadingBubble);
+                container.appendChild(loadingDiv);
+            }
+
+            // 自动滚动到最新消息
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ========================================
+        // 5. 核心函数：处理发送消息（用户点击发送按钮或按Enter键）
+        // ========================================
+        
+        function handleSendMessage() {
+            const input = document.getElementById('inputField');
+            const text = input.value.trim();  // 获取输入框的内容，并去除前后空格
+
+            // 如果输入框为空或分身还在回复，就不发送
+            if (!text || isLoading) return;
+
+            // 清空输入框
+            input.value = '';
+            
+            // 禁用输入框和发送按钮（防止用户重复发送）
+            input.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+
+            // 添加用户消息到messages数组
+            messages.push({
+                id: messages.length + 1,
+                type: 'user',  // 标记为用户消息
+                content: text
+            });
+
+            // 显示加载动画，表示分身正在回复
+            isLoading = true;
+            renderMessages();
+
+            // 模拟分身回复的延迟（800毫秒后回复）
+            setTimeout(() => {
+                // 根据用户输入生成分身的回复
+                const response = generateBotResponse(text);
+                
+                // 添加分身消息到messages数组
+                messages.push({
+                    id: messages.length + 1,
+                    type: 'bot',  // 标记为分身消息
+                    content: response
+                });
+
+                // 停止加载动画
+                isLoading = false;
+                
+                // 重新启用输入框和发送按钮
+                input.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                input.focus();  // 把焦点回到输入框（方便继续输入）
+                
+                // 重新渲染所有消息
+                renderMessages();
+            }, 800);
+        }
+
+        // ========================================
+        // 6. 核心函数：处理快捷问题按钮
+        // ========================================
+        
+        function handleQuickQuestion(question) {
+            const input = document.getElementById('inputField');
+            
+            // 禁用输入框和发送按钮
+            input.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+
+            // 直接添加用户的快捷问题到messages数组
+            messages.push({
+                id: messages.length + 1,
+                type: 'user',
+                content: question
+            });
+
+            // 显示加loading动画
+            isLoading = true;
+            renderMessages();
+
+            // 等待800毫秒后生成分身回复
+            setTimeout(() => {
+                // 根据快捷问题生成回复
+                const response = generateBotResponse(question);
+                
+                // 添加分身消息
+                messages.push({
+                    id: messages.length + 1,
+                    type: 'bot',
+                    content: response
+                });
+
+                // 停止加载动画
+                isLoading = false;
+                
+                // 重新启用输入框和发送按钮
+                input.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                
+                // 重新渲染所有消息
+                renderMessages();
+            }, 800);
+        }
+
+        // ========================================
+        // 7. 辅助函数：处理Enter键
+        // ========================================
+        
+        function handleKeyPress(event) {
+            // 当用户按下Enter键且分身没有正在回复时，发送消息
+            if (event.key === 'Enter' && !isLoading) {
+                handleSendMessage();
+            }
+        }
+
+        // ========================================
+        // 8. 初始化：页面加载时显示初始消息
+        // ========================================
+        
+        renderMessages();
+    </script>
+</body>
+</html>
